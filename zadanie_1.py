@@ -11,33 +11,16 @@ PREDZIAL_B = math.e
 
 
 def konstrukcja_f_expr(wyrazenie: str) -> Callable[[float], float]:
-
-    dozwolone = {name: getattr(math, name) for name in dir(math) if not name.startswith('_')}
-    dozwolone.update({'abs': abs, 'min': min, 'max': max, 'pow': pow})
-
-    try:
-        kod = compile(wyrazenie, '<wyrazenie>', 'eval')
-    except Exception as e:
-        raise ValueError(f"Niepoprawne wyrazenie: {e}") from e
+    # Jesli wyrazenie jest niepoprawne, wyjatek przejdzie na zewnatrz i program sie zakonczy.
+    globalns = {name: getattr(math, name) for name in dir(math) if not name.startswith('_')}
+    # Pozwalamy uzytkownikowi uzywac stalych typu 'e' czy 'pi' oraz funkcji math
+    globalns['__builtins__'] = __builtins__
+    kod = compile(wyrazenie, '<wyrazenie>', 'eval')
 
     def f(x: float) -> float:
-        lokalne = dict(dozwolone)
-        lokalne['x'] = x
-        try:
-            wynik = eval(kod, {'__builtins__': None}, lokalne)
-        except Exception as e:
-            raise
-        if not isinstance(wynik, (int, float)):
-            raise ValueError('Wyrazenie nie zwraca liczby')
+        lokalne = {'x': x}
+        wynik = eval(kod, globalns, lokalne)
         return float(wynik)
-
-    srodek = (PREDZIAL_A + PREDZIAL_B) / 2.0
-    try:
-        test = f(srodek)
-    except Exception as e:
-        raise ValueError(f"Wyrazenie nie moze byc ocenione: {e}") from e
-    if not isinstance(test, (int, float)):
-        raise ValueError('Wyrazenie nie zwraca liczby')
 
     return f
 
@@ -91,19 +74,18 @@ def wczytaj_wyrazenie_od_uzytkownika() -> tuple[str, Callable[[float], float]]:
             print(f'Blad w wyrazeniu: {e}. Sprobuj ponownie.')
 
 
-def ladny_raport(funkcja_nazwa: str, wyrazenie: str, f: Callable[[float], float], ziarno: int | None):
+def ladny_raport(funkcja_nazwa: str, wyrazenie: str, f: Callable[[float], float], ziarno: int | None, ns_list: list[int], kroki_ref: int):
     """Wykonaj obliczenia i wypisz czytelny raport po polsku."""
     print('\n--- Wyniki:')
     print(f'Funkcja ({funkcja_nazwa}): {wyrazenie}')
     print(f'Przedzial calkowania: [{PREDZIAL_A}, {PREDZIAL_B}]')
     print('\nLicze wartosc referencyjna (calka numeryczna, metoda prostokatow)...')
-    calka_ref = calka_numeryczna(f, PREDZIAL_A, PREDZIAL_B, kroki=200000)
-    print(f'Wartosc referencyjna (numeryczna): {calka_ref:.12f}')
+    calka_ref = calka_numeryczna(f, PREDZIAL_A, PREDZIAL_B, kroki=kroki_ref)
+    print(f'Wartosc referencyjna (numeryczna, kroki={kroki_ref}): {calka_ref:.12f}')
 
-    ns = [10, 50, 100]
     print('\nEstymacje Monte Carlo (metoda prostokatow, losowy podzial):')
     print(' n    estymacja          blad_abs          blad_wzgledny [%]')
-    for n in ns:
+    for n in ns_list:
         est = szacuj_mc_prostokaty(n, f, PREDZIAL_A, PREDZIAL_B, ziarno)
         blad_abs = abs(calka_ref - est)
         blad_wzg = (blad_abs / abs(calka_ref) * 100.0) if calka_ref != 0 else float('inf')
@@ -111,21 +93,18 @@ def ladny_raport(funkcja_nazwa: str, wyrazenie: str, f: Callable[[float], float]
 
 
 def main():
-    """Glowna funkcja uruchamiana z konsoli. Prowadzi dialog z uzytkownikiem.
-
-    Program prosci o wyrazenie f(x) i (opcjonalnie) ziarno. Wypisuje porownanie estymacji.
-    """
+    """Glowna funkcja uruchamiana z konsoli. Prowadzi dialog z uzytkownikiem."""
     print('Program: Oszacowanie calki metoda Monte Carlo (metoda prostokatow)')
     print('Przedzial calkowania: a=1, b=e')
+
+    ns_list = [10, 50, 100]      # liczby punktow do zbadania
+    kroki_ref = 200_000         # liczba podprzedzialow do calki referencyjnej
+
     wyraz, f = wczytaj_wyrazenie_od_uzytkownika()
     ziarno = time.time_ns()
     print(f'Uzyte ziarno (time.time_ns): {ziarno}')
-    ladny_raport('uzytkownika', wyraz, f, ziarno)
+    ladny_raport('uzytkownika', wyraz, f, ziarno, ns_list, kroki_ref)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('\nPrzerwane przez uzytkownika')
-        sys.exit(1)
+    main()
