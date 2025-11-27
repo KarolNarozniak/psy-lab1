@@ -2,6 +2,7 @@ from __future__ import annotations
 import math
 import random
 import sys
+import time
 from typing import Callable
 
 # Stale przedzialu calkowania
@@ -90,18 +91,6 @@ def wczytaj_wyrazenie_od_uzytkownika() -> tuple[str, Callable[[float], float]]:
             print(f'Blad w wyrazeniu: {e}. Sprobuj ponownie.')
 
 
-def wczytaj_ziarno() -> int | None:
-    """Popros uzytkownika o opcjonalne ziarno (int). Zwraca None albo int."""
-    wej = input('Opcjonalne ziarno (int) do powtarzalnosci, lub Enter: ').strip()
-    if not wej:
-        return None
-    try:
-        return int(wej)
-    except ValueError:
-        print('Niepoprawne ziarno. Pomijam i uzywam losowego.')
-        return None
-
-
 def ladny_raport(funkcja_nazwa: str, wyrazenie: str, f: Callable[[float], float], ziarno: int | None):
     """Wykonaj obliczenia i wypisz czytelny raport po polsku."""
     print('\n--- Wyniki:')
@@ -129,7 +118,8 @@ def main():
     print('Program: Oszacowanie calki metoda Monte Carlo (metoda prostokatow)')
     print('Przedzial calkowania: a=1, b=e')
     wyraz, f = wczytaj_wyrazenie_od_uzytkownika()
-    ziarno = wczytaj_ziarno()
+    ziarno = time.time_ns()
+    print(f'Uzyte ziarno (time.time_ns): {ziarno}')
     ladny_raport('uzytkownika', wyraz, f, ziarno)
 
 

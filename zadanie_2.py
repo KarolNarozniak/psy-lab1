@@ -1,10 +1,11 @@
 from __future__ import annotations
 import math
 import statistics
+import time
 from rn_generator_20251120 import RNGenerator
 
 
-def normal_box_muller(gen: RNGenerator, mu: float, sigma: float) -> float:
+def normal_probe_generator(gen: RNGenerator, mu: float, sigma: float) -> float:
     """Wygeneruj pojedyncza wartosc z rozkladu normalnego N(mu, sigma^2)."""
     # zabezpieczenie: u1 nie moze byc 0
     u1 = 0.0
@@ -19,7 +20,7 @@ def normal_box_muller(gen: RNGenerator, mu: float, sigma: float) -> float:
 
 def generuj_probe_normalna(gen: RNGenerator, mu: float, sigma: float, n: int) -> list[float]:
     """Generuj probe 'n' wartosci z rozkladu normalnego."""
-    return [normal_box_muller(gen, mu, sigma) for _ in range(n)]
+    return [normal_probe_generator(gen, mu, sigma) for _ in range(n)]
 
 
 def analizuj_probe(probka: list[float]) -> tuple[float, float]:
@@ -27,8 +28,7 @@ def analizuj_probe(probka: list[float]) -> tuple[float, float]:
     if len(probka) < 2:
         return (statistics.mean(probka) if probka else 0.0, 0.0)
     srednia_emp = statistics.mean(probka)
-    wariancja_emp = statistics.pvariance(probka) * (len(probka) / (len(probka) - 1))
-    # pvariance zwraca wariancje populacyjna (1/N); przeliczamy na nieobciazony (1/(N-1))
+    wariancja_emp = statistics.variance(probka)
     return srednia_emp, wariancja_emp
 
 
@@ -37,10 +37,11 @@ def main() -> None:
     # Ustawienia testu
     srodkowa_teoretyczna = 2.5
     odchylenie_teoretyczne = 1.7
-    N = 10000
+    N = 1000
 
-    # Utworz generator z losowym ziarnem
-    gen = RNGenerator()
+    ziarno = time.time_ns()
+    print(f'Uzyte ziarno (time.time_ns): {ziarno}')
+    gen = RNGenerator(ziarno)
 
     # Generuj probe
     print(f'Generuje probe N={N} z N({srodkowa_teoretyczna}, {odchylenie_teoretyczne}^2) ...')
@@ -55,7 +56,7 @@ def main() -> None:
     print(f' Wariancja teoretyczna = {odchylenie_teoretyczne**2:.6f}')
     print(f' Wariancja empiryczna  = {wariancja_emp:.6f}')
 
-    # Prosty raport bledu
+    # raport bledu
     blad_sredniej = abs(srednia_emp - srodkowa_teoretyczna)
     blad_wariancji = abs(wariancja_emp - odchylenie_teoretyczne ** 2)
     print(f' Blad sredniej = {blad_sredniej:.6f}')
